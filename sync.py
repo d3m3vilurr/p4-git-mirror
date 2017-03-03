@@ -95,7 +95,10 @@ def sync_repo(repo):
     for branch in branches:
         sync_to_git(git, repo, branch)
 
-    # sync remote?
+    # TODO select sync repo
+    remotes = filter(lambda x: x, git.remote().split())
+    for remote in remotes:
+        git.push(remote, '--all')
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
