@@ -1,0 +1,7 @@
+P4_PORT = ':1666'
+P4_USER = 'USERNAME'
+P4_PASSWD = 'PASSWORD'
+
+# only support //depot/prefix/branch/repo/path
+DEPOT_PREFIX = '//depot/prefix'
+

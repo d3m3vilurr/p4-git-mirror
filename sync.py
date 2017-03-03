@@ -1,0 +1,105 @@
+import os
+import sys
+import re
+from datetime import datetime
+from P4 import P4
+from git import Git, Repo
+from git.exc import GitCommandError
+from tzlocal import get_localzone
+
+import config as CONFIG
+
+p4 = P4()
+p4.port = CONFIG.P4_PORT
+p4.user = CONFIG.P4_USER
+p4.password = CONFIG.P4_PASSWD
+p4.connect()
+p4.run_login()
+raw_users = p4.run_users()
+users = {}
+for user in raw_users:
+    users[user['User']] = '%s <%s>' % (user['FullName'], user['Email'])
+localzone = get_localzone()
+
+def p4_download(repo, depot_path, change_no):
+    for info in p4.run('files', depot_path + '/...@' + change_no):
+        if 'text' in info['type'] or 'unicode' in info['type']:
+            mode = 'w'
+        else:
+            mode = 'wb'
+        if info['action'] == 'delete':
+            continue
+        fn = 'mirrors/' + repo + info['depotFile'].split(depot_path, 1)[1]
+        dirn = os.path.split(fn)[0]
+        if not os.path.exists(dirn):
+            os.makedirs(dirn)
+        data = p4.run('print', '%s#%s' % (info['depotFile'], info['rev']))
+        with open(fn, mode) as f:
+            f.write(''.join(data[1:]))
+    pass
+
+def sync_to_git(git, repo, branch):
+    git_branches = map(lambda x: x.lstrip(' *').strip(),
+                       git.branch().split('\n'))
+    if branch not in git_branches:
+        git.checkout('-f', '--orphan', branch)
+        start = 0
+    else:
+        git.checkout('-f', branch)
+        start = int(re.match('.*: change = (\d+)\]',
+                             git.log('-n', 1).split('\n')[-1]).group(1)) + 1
+    depot_path = '%s/%s/%s' % (CONFIG.DEPOT_PREFIX, branch, repo)
+    changes = p4.run('changes', ('%s/...@%d,@now' % (depot_path, start)))
+    if not changes:
+        return
+    sys.stdout.flush()
+    for idx, change in enumerate(reversed(changes)):
+        try:
+            # all clear repo
+            git.rm('-rfq', '.')
+        except GitCommandError:
+            pass
+        print ('\rsync %s ... %s' % (depot_path, change['change'])),
+        sys.stdout.flush()
+        raw_change = p4.run('change', '-o', change['change'])
+        p4_download(repo, depot_path, change['change'])
+        #print raw_change
+        msg = raw_change[0]['Description'] + '\n\n' + \
+            ('[git-p4: depot-paths = "%s": change = %s]' % (depot_path,
+                                                            change['change']))
+        date = localzone \
+                .localize(datetime.strptime(raw_change[0]['Date'],
+                                            '%Y/%m/%d %H:%M:%S'),
+                          is_dst=None) \
+                .isoformat()
+        git.add('-A')
+        git.commit('--date=' + date, '--author=' + users[raw_change[0]['User']],
+                   '--allow-empty', '-m', msg)
+    print
+
+def sync_repo(repo):
+    # fetch branches
+    dev_branches =  map(lambda x: x['Stream'].split(CONFIG.DEPOT_PREFIX + '/')[1],
+                        p4.run('streams', '-F', 'Type=development'))
+    rel_branches =  map(lambda x: x['Stream'].split(CONFIG.DEPOT_PREFIX + '/')[1],
+                        p4.run('streams', '-F', 'Type=release'))
+    branches = dev_branches + rel_branches
+
+    # create repo
+    repo_path = 'mirrors/' + repo
+    if not os.path.exists(repo_path):
+        os.makedirs(repo_path)
+    git = Git(repo_path)
+    git.init()
+
+    for branch in branches:
+        sync_to_git(git, repo, branch)
+
+    # sync remote?
+
+if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print 'Using: %s <repo>' % sys.argv[0]
+        sys.exit(1)
+
+    sync_repo(sys.argv[1])
