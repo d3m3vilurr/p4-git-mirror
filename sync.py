@@ -77,7 +77,7 @@ def sync_to_git(git, repo, branch):
                    '--allow-empty', '-m', msg)
     print
 
-def sync_repo(repo):
+def sync_repo(repo, push_remotes=None):
     # fetch branches
     dev_branches =  map(lambda x: x['Stream'].split(CONFIG.DEPOT_PREFIX + '/')[1],
                         p4.run('streams', '-F', 'Type=development'))
@@ -95,9 +95,14 @@ def sync_repo(repo):
     for branch in branches:
         sync_to_git(git, repo, branch)
 
-    # TODO select sync repo
+    # automatic push to remote
+    if not push_remotes:
+        return
+
     remotes = filter(lambda x: x, git.remote().split())
     for remote in remotes:
+        if remote not in push_remotes:
+            continue
         git.push(remote, '--all')
 
 if __name__ == '__main__':
@@ -105,4 +110,13 @@ if __name__ == '__main__':
         print 'Using: %s <repo>' % sys.argv[0]
         sys.exit(1)
 
-    sync_repo(sys.argv[1])
+    import argparse
+
+    parser = argparse.ArgumentParser(description='perforce-git-mirror')
+    parser.add_argument('--remotes', type=str, nargs='*',
+                        help='automatic push to remote servers')
+    parser.add_argument('repo', type=str, nargs='+',
+                        help='target repositories')
+    args = parser.parse_args()
+    for repo in args.repo:
+        sync_repo(repo, args.remotes)
