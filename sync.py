@@ -52,7 +52,7 @@ def sync_to_git(git, repo, branch):
                               git.branch('--remotes').split('\n'))
     if branch not in git_branches:
         remote_branches = \
-                filter(lambda remote_br: branch == remote_br.split('/', 1)[1],
+                filter(lambda remote_br: branch == remote_br.split('/', 1)[-1],
                        git_remote_branches)
         if not remote_branches:
             git.checkout('-f', '--orphan', branch)
