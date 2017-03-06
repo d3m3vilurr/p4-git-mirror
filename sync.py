@@ -38,16 +38,29 @@ def p4_download(repo, depot_path, change_no):
             f.write(''.join(data[1:]))
     pass
 
+def fetch_last_changes(git):
+    try:
+        return int(re.match('.*: change = (\d+)\]',
+                            git.log('-n', 1).split('\n')[-1]).group(1))
+    except GitCommandError:
+        return -1
+
 def sync_to_git(git, repo, branch):
     git_branches = map(lambda x: x.lstrip(' *').strip(),
                        git.branch().split('\n'))
+    git_remote_branches = map(lambda x: x.strip(),
+                              git.branch('--remotes').split('\n'))
     if branch not in git_branches:
-        git.checkout('-f', '--orphan', branch)
-        start = 0
+        remote_branches = \
+                filter(lambda remote_br: branch == remote_br.split('/', 1)[1],
+                       git_remote_branches)
+        if not remote_branches:
+            git.checkout('-f', '--orphan', branch)
+        else:
+            git.checkout('-f', remote_branches, '-b', branch)
     else:
         git.checkout('-f', branch)
-        start = int(re.match('.*: change = (\d+)\]',
-                             git.log('-n', 1).split('\n')[-1]).group(1)) + 1
+    start = fetch_last_changes(git) + 1
     depot_path = '%s/%s/%s' % (CONFIG.DEPOT_PREFIX, branch, repo)
     changes = p4.run('changes', ('%s/...@%d,@now' % (depot_path, start)))
     if not changes:
