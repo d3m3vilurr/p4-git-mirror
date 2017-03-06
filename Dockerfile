@@ -10,7 +10,7 @@ RUN set -x \
     && cd /etc/apt \
     && sed -i 's/deb.debian.org/ftp.kaist.ac.kr/g' sources.list \
     && sed -i 's/security.debian.org/ftp.kaist.ac.kr\/debian-security/g' sources.list \
-    && builds='build-essential curl libssl-dev git' \
+    && builds='build-essential curl libssl-dev git openssh-client' \
     && apt-get update && apt-get install -y $builds --no-install-recommends \
     && rm -rf /var/lib/apt/lists/* \
     && curl http://cdist2.perforce.com/perforce/r$P4_VERSION/bin.linux26x86_64/p4 -o /usr/local/bin/p4 \
