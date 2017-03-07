@@ -70,6 +70,7 @@ def sync_to_git(git, repo, branch):
         try:
             # all clear repo
             git.rm('-rfq', '.')
+            git.clean('-fdx')
         except GitCommandError:
             pass
         print ('\rsync %s ... %s' % (depot_path, change['change'])),
