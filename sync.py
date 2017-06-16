@@ -93,11 +93,13 @@ def sync_to_git(git, repo, branch):
 
 def sync_repo(repo, push_remotes=None):
     # fetch branches
+    main_branches =  map(lambda x: x['Stream'].split(CONFIG.DEPOT_PREFIX + '/')[1],
+                        p4.run('streams', '-F', 'Type=mainline'))
     dev_branches =  map(lambda x: x['Stream'].split(CONFIG.DEPOT_PREFIX + '/')[1],
                         p4.run('streams', '-F', 'Type=development'))
     rel_branches =  map(lambda x: x['Stream'].split(CONFIG.DEPOT_PREFIX + '/')[1],
                         p4.run('streams', '-F', 'Type=release'))
-    branches = dev_branches + rel_branches
+    branches = main_branches + dev_branches + rel_branches
 
     # create repo
     repo_path = 'mirrors/' + repo
