@@ -29,7 +29,8 @@ def p4_download(repo, depot_path, change_no):
             mode = 'wb'
         if 'delete' in info['action']:
             continue
-        fn = 'mirrors/' + repo + info['depotFile'].split(depot_path, 1)[1]
+        depot_file = info['depotFile'][len(depot_path):]
+        fn = 'mirrors/' + repo + depot_file
         dirn = os.path.split(fn)[0]
         if not os.path.exists(dirn):
             os.makedirs(dirn)
