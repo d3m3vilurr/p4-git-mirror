@@ -5,3 +5,7 @@ P4_PASSWD = 'PASSWORD'
 # only support //depot/prefix/branch/repo/path
 DEPOT_PREFIX = '//depot/prefix'
 
+# uncomment and manual set if you use this for old legacy depot
+#P4_EXPIRED_USERS = {
+#    'REMOVED_USER_ID': 'Old UserName <oldman@mail.local>',
+#}
