@@ -20,8 +20,6 @@ users = {}
 for user in raw_users:
     users[user['User']] = '%s <%s>' % (user['FullName'], user['Email'])
 for userid, author in getattr(CONFIG, 'P4_EXPIRED_USERS', {}).iteritems():
-    if users.get(userid):
-        continue
     users[userid] = author
 localzone = get_localzone()
 
